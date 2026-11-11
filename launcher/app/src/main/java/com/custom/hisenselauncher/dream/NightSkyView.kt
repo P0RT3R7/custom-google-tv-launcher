@@ -150,6 +150,7 @@ class NightSkyView(ctx: Context) : View(ctx) {
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(215, 8, 12, 34) }
     private val path = Path()
     private val rect = RectF()
+    private val keepOut = RectF()
     private var skyShader: Shader? = null
     private var groundShader: Shader? = null
     private var glow: Bitmap? = null
@@ -262,6 +263,11 @@ class NightSkyView(ctx: Context) : View(ctx) {
         // sky
         starPaint.shader = skyShader; c.drawRect(0f, 0f, w, h * HORIZON + 2, starPaint); starPaint.shader = null
 
+        // keep the "Look up" panel area clear (sized for its max 6 rows) so nothing shows through it
+        keepOut.set(54f * scale, 44f * scale, 606f * scale, 494f * scale)
+        c.save()
+        c.clipOutRect(keepOut)
+
         // Milky Way glow
         glow?.let { g ->
             for (i in mwRa.indices) {
@@ -332,12 +338,14 @@ class NightSkyView(ctx: Context) : View(ctx) {
             // label below the figure
             val lx = xs.average().toFloat()
             val ly = ys.maxOrNull()!! + 44f * scale
-            if (ly < h * HORIZON - 10f * scale) {
+            if (ly < h * HORIZON - 10f * scale && !RectF.intersects(keepOut, RectF(lx - 130f * scale, ly - 34f * scale, lx + 130f * scale, ly + 36f * scale))) {
                 namePaint.textAlign = Paint.Align.CENTER; hintPaint.textAlign = Paint.Align.CENTER
                 c.drawText(con.name, lx, ly, namePaint)
                 c.drawText("${dir8(az)} · ${alt.toInt().coerceAtLeast(0)}° up", lx, ly + 28f * scale, hintPaint)
             }
         }
+
+        c.restore()
 
         // horizon: mountains + ground + compass + range names
         val hy = h * HORIZON

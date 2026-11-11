@@ -33,19 +33,29 @@ Continue Watching, and a screensaver that shows you which stars to look for toni
 
 ## Screensavers
 
+<img src="docs/images/night-sky.jpg" alt="Night Sky screensaver: constellations with lines and labels over a mountain horizon, with a panel listing where to look" width="100%">
+
+**Night Sky.** The real sky over your location, right now, slowly turning around the horizon. The panel lists the best
+constellations to go outside and find, with the direction to face and how high to look. During the day it shows tonight's sky.
+
 <table>
 <tr>
-<td width="50%"><img src="docs/images/night-sky.jpg" alt="Night Sky screensaver: constellations with lines and labels over a mountain horizon, with a panel listing where to look"></td>
-<td width="50%"><img src="docs/images/weather.jpg" alt="Weather screen with current conditions, next 24 hours and 7-day forecast"></td>
+<td width="50%"><img src="docs/images/topo.jpg" alt="Topo Glow screensaver: colored relief map from teal valleys to rust peaks with glowing contour lines"></td>
+<td width="50%"><img src="docs/images/jellyfish.jpg" alt="Jellyfish Deep screensaver: glowing violet sea nettles and pale moon jellies on black"></td>
 </tr>
 <tr>
-<td><b>Night Sky.</b> The real sky over your location, right now. The panel lists the best constellations to go outside and find, with the direction to face and how high to look.</td>
-<td><b>Weather.</b> Open it from the top bar: conditions now, the next 24 hours, 7 days, sunrise and sunset, and active alerts.</td>
+<td><b>Topo Glow.</b> A colored relief map with hillshading and glowing contour lines that drifts slowly north.</td>
+<td><b>Jellyfish Deep.</b> Sea nettles and moon jellies drifting through dark water.</td>
 </tr>
 </table>
 
-Two more screensaver themes are built in: **Topo Glow** (a colored relief map with glowing contour lines that drifts slowly) and
-**Jellyfish Deep**. Pick one with ☰ → Screensaver theme, or let them rotate.
+Pick one with ☰ → Screensaver theme, or let them rotate.
+
+## Weather
+
+<img src="docs/images/weather.jpg" alt="Weather screen with current conditions, next 24 hours and 7-day forecast" width="100%">
+
+Open it from the top bar: conditions now, the next 24 hours, 7 days, sunrise and sunset, and active alerts.
 
 ## Setup with Claude (easiest)
 
