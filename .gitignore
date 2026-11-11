@@ -1,0 +1,10 @@
+# never commit: machine paths, signing keys, personal API keys, TV backups
+local.properties
+keystore.properties
+*.jks
+*.keystore
+trakt.properties
+backup/
+.gradle/
+.kotlin/
+build/
