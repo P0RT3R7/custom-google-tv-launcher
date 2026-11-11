@@ -78,10 +78,21 @@ If an install fails with a signature mismatch, an older copy signed with a diffe
 **Set the location** (weather, weather alerts and the night-sky screensaver). Ask the user for their city, look up its
 coordinates, then:
 ```bash
-adb shell am start -n com.custom.hisenselauncher/.MainActivity --es set_place "City, State" --ef lat 39.7392 --ef lon -104.9903
+adb shell am broadcast -n com.custom.hisenselauncher/.ConfigReceiver --es set_place "City, State" --ef lat 39.7392 --ef lon -104.9903
 ```
-(This opens the launcher, so only do it when the user is ready.) It can also be changed on the TV: ☰ → Location.
+This changes the setting without opening anything on screen. It can also be changed on the TV: ☰ → Location.
 Default is Bozeman, Montana. Weather is in °F; alerts come from the US National Weather Service (US only).
+The same receiver takes `--es screensaver_theme ROTATE|NIGHT_SKY|TOPO|JELLYFISH` and `--es night_mode AUTO|ON|OFF`.
+It only accepts broadcasts from adb (it requires the DUMP permission).
+
+**Screensaver and sleep timing** (ask what they want; old values are in the backup and restore.sh puts them back).
+`screen_off_timeout` is idle time before the screensaver starts; `sleep_timeout` is total idle time before the TV turns off.
+For example, stars after 5 minutes, then off 30 minutes later:
+```bash
+adb shell settings put system screen_off_timeout 300000
+adb shell settings put secure sleep_timeout 2100000
+```
+Some brands also have their own auto-sleep timer in the TV's picture/power settings that can turn it off sooner.
 
 ## Phase 5: Make it the only home screen (needs approval)
 Pressing Home must open the custom launcher. On Google TV the stock launcher (`com.google.android.apps.tv.launcherx`)

@@ -147,7 +147,7 @@ class NightSkyView(ctx: Context) : View(ctx) {
     private val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(236, 240, 255); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL) }
     private val hintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(200, 170, 200, 255); typeface = Typeface.create("sans-serif", Typeface.NORMAL) }
     private val compassPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(170, 200, 190, 255); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL); textAlign = Paint.Align.CENTER }
-    private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(150, 8, 12, 34) }
+    private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(215, 8, 12, 34) }
     private val path = Path()
     private val rect = RectF()
     private var skyShader: Shader? = null

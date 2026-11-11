@@ -66,6 +66,12 @@
             </intent-filter>
         </service>
 
+        <!-- adb-only settings changes (shell holds DUMP; regular apps can't send this) -->
+        <receiver
+            android:name=".ConfigReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+
         <!-- Jellyfish screensaver -->
         <service
             android:name=".dream.JellyDreamService"

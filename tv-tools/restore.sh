@@ -50,9 +50,10 @@ for k in window_animation_scale transition_animation_scale animator_duration_sca
   restore global "$k"
 done
 # screensaver + notification listener (jellyfish screensaver / media access, added in v2)
-for k in screensaver_components screensaver_enabled enabled_notification_listeners; do
+for k in screensaver_components screensaver_enabled enabled_notification_listeners sleep_timeout; do
   restore secure "$k"
 done
+restore system screen_off_timeout
 sh appops set "$CUSTOM_LAUNCHER" GET_USAGE_STATS default 2>/dev/null
 
 echo "== Done. Rebooting recommended: $ADB -s $TV reboot =="
