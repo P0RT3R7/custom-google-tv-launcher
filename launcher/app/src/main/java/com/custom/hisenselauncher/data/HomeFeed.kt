@@ -96,6 +96,9 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
         val rows = ArrayList<FeedRow>()
         val used = HashSet<String>(watched)
 
+        // New episodes of shows you watch (aired in the last 3 weeks, or airing in the next week)
+        safe { newEpisodes(local, traktHistory, traktPlayback) }.takeIf { it.isNotEmpty() }?.let { rows += FeedRow("New episodes", it, landscape = true) }
+
         // Recently on YouTube (and other video platforms)
         val videos = local.filter { VideoApps.isPlatform(it.pkg) && !it.appLevel }.take(20).map { it.toPoster() }
         if (videos.isNotEmpty()) {
@@ -127,6 +130,48 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
 
         return Feed(cont.distinctBy { it.imdb ?: (it.pkg + WatchHistoryStore.normalize(it.title)) }.take(20), recent, rows)
     }
+
+    private fun newEpisodes(local: List<HistoryItem>, history: List<TraktItem>, playback: List<TraktItem>): List<PosterItem> {
+        val now = System.currentTimeMillis()
+        val day = 86_400_000L
+        // shows watched in the last 4 months, most recent first
+        val shows = LinkedHashMap<String, Long>()
+        (local.filter { it.type == "series" && now - it.lastSeen < 120 * day }.mapNotNull { h -> h.resolvedImdb?.let { it to h.lastSeen } } +
+            (history + playback).filter { it.type == "series" && now - it.at < 120 * day }.mapNotNull { t -> t.imdb?.let { it to t.at } })
+            .sortedByDescending { it.second }
+            .forEach { (imdb, at) -> if (imdb !in shows) shows[imdb] = at }
+        // episodes already seen (Trakt, or "S1 E2" in a local subtitle)
+        val seen = HashSet<String>()
+        (history + playback).forEach { t -> if (t.imdb != null && t.season != null && t.episode != null) seen += "${t.imdb}:${t.season}:${t.episode}" }
+        val se = Regex("""(?i)S(\d+)\s*E(\d+)""")
+        local.forEach { h -> h.resolvedImdb?.let { id -> h.subtitle?.let { se.find(it) }?.let { m -> seen += "$id:${m.groupValues[1].toInt()}:${m.groupValues[2].toInt()}" } } }
+
+        val dayFmt = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
+        val dateFmt = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
+        val aired = ArrayList<Pair<Long, PosterItem>>(); val upcoming = ArrayList<Pair<Long, PosterItem>>()
+        for (imdb in shows.keys.take(15)) {
+            val meta = Cinemeta.meta("series", imdb) ?: continue
+            val eps = meta.episodes.filter { it.released in (now - 21 * day)..(now + 7 * day) && "$imdb:${it.season}:${it.episode}" !in seen }
+            // at most the two newest aired + the next upcoming per show
+            eps.filter { it.released <= now }.sortedByDescending { it.released }.take(2).forEach { e ->
+                val ago = (now - e.released) / day
+                val whenLabel = when { ago < 1 -> "New today"; ago < 2 -> "New yesterday"; ago < 7 -> "New ${dayFmt.format(e.released)}"; else -> "Out ${dateFmt.format(e.released)}" }
+                aired += e.released to episodeCard(meta, e, whenLabel)
+            }
+            eps.filter { it.released > now }.minByOrNull { it.released }?.let { e ->
+                val inDays = (e.released - now) / day
+                upcoming += e.released to episodeCard(meta, e, if (inDays < 1) "Airs today" else "Airs ${dayFmt.format(e.released)}")
+            }
+        }
+        return aired.sortedByDescending { it.first }.map { it.second } + upcoming.sortedBy { it.first }.map { it.second }
+    }
+
+    private fun episodeCard(show: Title, e: Episode, whenLabel: String) = PosterItem(
+        title = show.name,
+        subtitle = listOfNotNull("S${e.season} E${e.episode}", e.name, whenLabel).joinToString(" · "),
+        image = e.thumbnail ?: show.background ?: Cinemeta.backgroundUrl(show.imdb),
+        imdb = show.imdb, type = "series", season = e.season, episode = e.episode,
+    )
 
     private fun becauseYouWatched(seed: Seed, exclude: Set<String>): List<PosterItem> {
         val meta = Cinemeta.meta(seed.type, seed.imdb) ?: return emptyList()

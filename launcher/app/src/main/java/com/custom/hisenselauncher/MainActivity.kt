@@ -61,6 +61,10 @@ import com.custom.hisenselauncher.ui.applyFocusStyle
 import com.custom.hisenselauncher.ui.cardBackground
 import com.custom.hisenselauncher.wallpaper.WallpaperLayer
 import com.custom.hisenselauncher.weather.WeatherActivity
+import com.custom.hisenselauncher.weather.SkiActivity
+import com.custom.hisenselauncher.data.AuroraOutlook
+import com.custom.hisenselauncher.data.AuroraRepository
+import com.custom.hisenselauncher.data.SkiRepository
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
@@ -84,6 +88,9 @@ class MainActivity : Activity() {
     private lateinit var weatherIcon: TextView
     private lateinit var weatherTemp: TextView
     private lateinit var weatherHiLo: TextView
+    private lateinit var skiPill: TextView
+    private lateinit var auroraPill: TextView
+    private var lastOutdoorFetch = 0L
 
     private lateinit var continueRow: Row
     private lateinit var favRow: Row
@@ -154,6 +161,8 @@ class MainActivity : Activity() {
         if (System.currentTimeMillis() - lastFeedAt > 10_000L) loadFeed()   // network parts are cached, so this is cheap
         handler.removeCallbacks(weatherTick)
         if (weatherRepo.isStale) handler.post(weatherTick) else handler.postDelayed(weatherTick, WeatherRepository.REFRESH_MS)
+        renderOutdoor()
+        if (System.currentTimeMillis() - lastOutdoorFetch > 30 * 60_000L) fetchOutdoor()
     }
 
     override fun onPause() {
@@ -285,6 +294,13 @@ class MainActivity : Activity() {
         weather.addView(weatherIcon); weather.addView(col)
         bar.addView(weather)
 
+        auroraPill = pill("🌌 Aurora tonight", ::showAurora).apply {
+            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = ui.f(40f); setColor(Color.argb(170, 20, 150, 90)) }
+            visibility = View.GONE
+        }
+        bar.addView(auroraPill, pillLp())
+        skiPill = pill("⛷ Ski report") { startActivity(Intent(this, SkiActivity::class.java)) }.apply { visibility = View.GONE }
+        bar.addView(skiPill, pillLp())
         bar.addView(pill("🔍 Search") { startActivity(Intent(this, SearchActivity::class.java)) }, pillLp())
         bar.addView(pill("HDMI Inputs", ::showHdmiInputs), pillLp())
         bar.addView(pill("Settings", ::openSettings), pillLp())
@@ -390,6 +406,40 @@ class MainActivity : Activity() {
     private fun setupMissing(): List<String> = buildList {
         if (!MediaSessionHub.hasAccess(this@MainActivity)) add("media access off — Recently Watched can't record titles")
         if (!usageRepo.hasAccess()) add("usage access off — Your Apps Lately uses launcher history only")
+    }
+
+    /** Aurora outlook (every 30 min) and ski pill text (refreshed with it). */
+    private fun fetchOutdoor() {
+        lastOutdoorFetch = System.currentTimeMillis()
+        io.execute {
+            AuroraRepository(prefs).fetch()
+            runCatching { if (SkiRepository(this, prefs).nearby().isNotEmpty()) SkiRepository(this, prefs).fetch() else prefs.skiPill = null }
+            handler.post { renderOutdoor() }
+        }
+    }
+
+    private fun renderOutdoor() {
+        val ski = SkiRepository(this, prefs).nearby().isNotEmpty()
+        skiPill.visibility = if (ski) View.VISIBLE else View.GONE
+        skiPill.text = "⛷ " + (prefs.skiPill ?: "Ski report")
+        val a = AuroraRepository(prefs).cached()
+        val lvl = a?.level ?: AuroraOutlook.Level.NONE
+        auroraPill.visibility = if (lvl == AuroraOutlook.Level.NONE) View.GONE else View.VISIBLE
+        auroraPill.text = when (lvl) {
+            AuroraOutlook.Level.STRONG -> "🌌 Strong aurora tonight"
+            AuroraOutlook.Level.LIKELY -> "🌌 Aurora tonight"
+            else -> "🌌 Aurora: slight chance"
+        }
+        (auroraPill.background as? android.graphics.drawable.GradientDrawable)?.setColor(
+            if (lvl == AuroraOutlook.Level.SLIGHT) Color.argb(110, 20, 80, 60) else Color.argb(170, 20, 150, 90))
+    }
+
+    private fun showAurora() {
+        val a = AuroraRepository(prefs).cached() ?: return
+        darkDialog().setTitle(a.headline)
+            .setMessage(a.detail + "\n\nBest chance: a dark spot away from town lights, facing north, between about 10 PM and 2 AM.")
+            .setPositiveButton("Show the sky") { _, _ -> previewScreensaver(ScreensaverTheme.NIGHT_SKY) }
+            .setNegativeButton("Close", null).show()
     }
 
     private fun fetchWeather() {

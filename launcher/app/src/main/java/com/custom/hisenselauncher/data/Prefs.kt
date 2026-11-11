@@ -59,6 +59,15 @@ class Prefs(ctx: Context) {
         get() = sp.getString("place_lon", null)
         set(v) { sp.edit().putString("place_lon", v).apply() }
 
+    var auroraJson: String?
+        get() = sp.getString("aurora_json", null)
+        set(v) { sp.edit().putString("aurora_json", v).apply() }
+
+    /** Short text for the top-bar ski pill, e.g. "Bridger 6\" new". */
+    var skiPill: String?
+        get() = sp.getString("ski_pill", null)
+        set(v) { sp.edit().putString("ski_pill", v).apply() }
+
     private fun split(s: String?) = s?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
 
     companion object {

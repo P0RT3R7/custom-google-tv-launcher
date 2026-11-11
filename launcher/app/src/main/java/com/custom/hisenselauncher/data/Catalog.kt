@@ -20,7 +20,11 @@ data class Title(
     val poster: String?,
     val background: String?,
     val description: String?,
+    /** Series only, from meta(): every episode with its release time. */
+    val episodes: List<Episode> = emptyList(),
 )
+
+data class Episode(val season: Int, val episode: Int, val name: String?, val released: Long, val thumbnail: String?)
 
 /**
  * Free, key-less catalog (Stremio Cinemeta) + metahub artwork.
@@ -43,7 +47,7 @@ object Cinemeta {
 
     fun meta(type: String, imdb: String): Title? = cached("meta:$type:$imdb") {
         val o = JSONObject(Http.get("$BASE/meta/$type/$imdb.json")).optJSONObject("meta")
-        o?.let { parse(it, type) } ?: NONE
+        o?.let { m -> parse(m, type)?.copy(episodes = parseEpisodes(m)) } ?: NONE
     }.let { if (it === NONE) null else it as Title }
 
     private val NONE = Any()
@@ -77,6 +81,20 @@ object Cinemeta {
             background = o.optString("background").ifBlank { backgroundUrl(id) },
             description = o.optString("description").ifBlank { null },
         )
+    }
+
+    private val iso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+
+    private fun parseEpisodes(m: JSONObject): List<Episode> {
+        val v = m.optJSONArray("videos") ?: return emptyList()
+        return (0 until v.length()).mapNotNull { i ->
+            val o = v.optJSONObject(i) ?: return@mapNotNull null
+            val season = o.optInt("season", -1); val ep = o.optInt("episode", o.optInt("number", -1))
+            val rel = o.optString("released").ifBlank { o.optString("firstAired") }.take(19)
+            if (season <= 0 || ep <= 0 || rel.length < 10) return@mapNotNull null
+            val at = runCatching { synchronized(iso) { iso.parse(if (rel.length == 10) rel + "T00:00:00" else rel)!!.time } }.getOrNull() ?: return@mapNotNull null
+            Episode(season, ep, o.optString("name").ifBlank { o.optString("title") }.ifBlank { null }, at, o.optString("thumbnail").ifBlank { null })
+        }
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")

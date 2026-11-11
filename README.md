@@ -25,11 +25,14 @@ Continue Watching, and a screensaver that shows you which stars to look for toni
 | 📺 **Continue Watching** | Resume cards for apps like Hulu, plus episode-level progress from Trakt and apps that share it |
 | ▶️ **YouTube history** | A "Recently on YouTube" row; half-watched long videos show up in Continue Watching and reopen the exact video |
 | 🔍 **Title reader** (experimental) | Reads the show name off Hulu, Netflix, Prime Video, Disney+ and Max player screens, which don't share it |
+| 🆕 **New episodes** | Shows you've been watching that have a new episode out in the last 3 weeks, or one airing this week |
 | 🎬 **Recently Watched + suggestions** | "Because you watched…" rows built from your history, opening straight into Nuvio or Stremio |
 | ⭐ **Favorites, recent apps, All Apps** | Long-press any tile to reorder, pin or hide |
 | 🌤 **Weather** | Current conditions in the top bar; full screen with 24-hour and 7-day forecast and NWS alerts |
 | 🔎 **Search with voice** | Apps, movies and shows in one place |
 | 🎵 **Now Playing bar** | Shows what's playing in the background |
+| ⛷ **Snow report** | New snow, measured snow depth, 3-day snowfall forecast, summit weather and avalanche danger for the nearest ski areas |
+| 🌌 **Aurora alerts** | A top-bar alert on nights when NOAA's forecast says the northern lights may be visible where you live, plus a glow on the Night Sky screensaver |
 | 🌙 **Night mode** | A warm, dim filter from 8:30 PM to 5 AM so the screen is easy on your eyes |
 | 🔌 **HDMI inputs + Settings** | One click from the top bar |
 
@@ -58,6 +61,14 @@ Pick one with ☰ → Screensaver theme, or let them rotate.
 <img src="docs/images/weather.jpg" alt="Weather screen with current conditions, next 24 hours and 7-day forecast" width="100%">
 
 Open it from the top bar: conditions now, the next 24 hours, 7 days, sunrise and sunset, and active alerts.
+
+## Snow report
+
+<img src="docs/images/ski.jpg" alt="Snow report screen for Bridger Bowl and Big Sky: new snow, snow depth, forecast, summit weather and avalanche danger" width="100%">
+
+The ⛷ pill in the top bar shows the headline ("Bridger 6\" new") and opens the full report for the ski areas within about 100 miles.
+New snow and the forecast come from Open-Meteo at mid-mountain elevation, snow depth from the nearest NRCS SNOTEL station,
+and avalanche danger from avalanche.org. Lift status isn't published in an open format, so it isn't shown.
 
 ## Setup with Claude (easiest)
 

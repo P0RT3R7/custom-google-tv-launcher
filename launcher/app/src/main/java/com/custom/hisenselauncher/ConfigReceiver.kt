@@ -34,10 +34,11 @@ class ConfigReceiver : BroadcastReceiver() {
             Places.save(prefs, Place(place, i.getFloatExtra("lat", 0f).toDouble(), i.getFloatExtra("lon", 0f).toDouble()))
             done += "place=$place"
         }
-        // --es open weather | search | preview_NIGHT_SKY | preview_TOPO | preview_JELLYFISH  (for screenshots)
+        // --es open weather | search | ski | preview_NIGHT_SKY | preview_TOPO | preview_JELLYFISH  (for screenshots)
         i.getStringExtra("open")?.let { what ->
             val target = when {
                 what == "weather" -> Intent(ctx, com.custom.hisenselauncher.weather.WeatherActivity::class.java)
+                what == "ski" -> Intent(ctx, com.custom.hisenselauncher.weather.SkiActivity::class.java)
                 what == "search" -> Intent(ctx, com.custom.hisenselauncher.search.SearchActivity::class.java)
                 what.startsWith("preview_") -> Intent(ctx, com.custom.hisenselauncher.dream.ScreensaverPreviewActivity::class.java)
                     .putExtra(com.custom.hisenselauncher.dream.ScreensaverPreviewActivity.EXTRA_THEME, what.removePrefix("preview_"))

@@ -90,6 +90,10 @@ class NightSkyView(ctx: Context) : View(ctx) {
     /** Horizon ridges: azimuth center, half-width (deg), height (deg). Named ranges only near Bozeman. */
     private class Range(val name: String, val az: Float, val half: Float, val height: Float)
     private val place = Places.current(Prefs(ctx))
+    private val aurora = com.custom.hisenselauncher.data.AuroraRepository(Prefs(ctx)).cached()
+    private var auroraBmp: Bitmap? = null
+    private val auroraPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val auroraTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(120, 255, 170); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL) }
     private val nearBozeman = Places.distanceKm(place, Places.DEFAULT) < 80.0
     private val ranges = if (!nearBozeman) listOf(
         Range("", 30f, 40f, 1.6f), Range("", 150f, 30f, 1.1f), Range("", 230f, 35f, 1.9f), Range("", 320f, 25f, 1.2f),
@@ -171,6 +175,15 @@ class NightSkyView(ctx: Context) : View(ctx) {
             shader = RadialGradient(32f, 32f, 32f, intArrayOf(Color.argb(255, 190, 200, 255), Color.argb(90, 150, 140, 230), 0), floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP)
         })
         glow = g
+        // vertical aurora curtain: transparent violet at the top -> bright green at the bottom
+        val ab = Bitmap.createBitmap(1, 128, Bitmap.Config.ARGB_8888)
+        for (y in 0 until 128) {
+            val f = y / 127f
+            val a = (255 * f.pow(1.6f)).toInt()
+            val r = (150 * (1 - f) + 60 * f).toInt(); val gg = (90 * (1 - f) + 255 * f).toInt(); val b = (200 * (1 - f) + 140 * f).toInt()
+            ab.setPixel(0, y, Color.argb(a, r, gg, b))
+        }
+        auroraBmp = ab
     }
 
     // ------------------------------------------------------------------ astronomy
@@ -264,9 +277,36 @@ class NightSkyView(ctx: Context) : View(ctx) {
         starPaint.shader = skyShader; c.drawRect(0f, 0f, w, h * HORIZON + 2, starPaint); starPaint.shader = null
 
         // keep the "Look up" panel area clear (sized for its max 6 rows) so nothing shows through it
-        keepOut.set(54f * scale, 44f * scale, 606f * scale, 494f * scale)
+        keepOut.set(54f * scale, 44f * scale, 606f * scale, 540f * scale)
         c.save()
         c.clipOutRect(keepOut)
+
+        // aurora on the northern horizon when the forecast (or right now, after dark) supports it
+        val darkNow = timeLabel.startsWith("Now")
+        val auroraLvl = aurora?.let { if (darkNow) it.nowLevel else it.level }
+        if (aurora != null && auroraLvl != null && auroraLvl != com.custom.hisenselauncher.data.AuroraOutlook.Level.NONE) {
+            val kp = if (darkNow) aurora.kpNow else aurora.kpTonight
+            val baseDeg = ((kp - aurora.kpNeeded + 2) * 6.0).coerceIn(5.0, 38.0)
+            val strength = when (auroraLvl) { com.custom.hisenselauncher.data.AuroraOutlook.Level.STRONG -> 0.85f; com.custom.hisenselauncher.data.AuroraOutlook.Level.LIKELY -> 0.6f; else -> 0.35f }
+            auroraBmp?.let { ab ->
+                var a = -80.0
+                val step = 1.5
+                val hy = h * HORIZON
+                while (a <= 80.0) {
+                    val az = (a + 360.0) % 360.0
+                    if (visibleAz(az)) {
+                        val fall = cos(Math.toRadians(a / 80.0 * 90.0))
+                        val ray = 0.55 + 0.45 * sin(a * 0.21 + t * 0.35) * sin(a * 0.07 - t * 0.2)
+                        val top = py(baseDeg * ray * fall)
+                        val x = px(az); val half = (step / FOV * w * 0.75).toFloat()
+                        auroraPaint.alpha = (255 * strength * fall * (0.6 + 0.4 * sin(a * 0.5 + t * 0.9))).toInt().coerceIn(0, 255)
+                        rect.set(x - half, top, x + half, hy)
+                        c.drawBitmap(ab, null, rect, auroraPaint)
+                    }
+                    a += step
+                }
+            }
+        }
 
         // Milky Way glow
         glow?.let { g ->
@@ -383,7 +423,8 @@ class NightSkyView(ctx: Context) : View(ctx) {
         val pad = 28f * scale
         val rowH = 46f * scale
         val pw = 520f * scale
-        val ph = pad * 2 + 86f * scale + rowH * best.size
+        val auroraLine = aurora?.takeIf { it.level != com.custom.hisenselauncher.data.AuroraOutlook.Level.NONE }?.headline
+        val ph = pad * 2 + 86f * scale + rowH * best.size + (if (auroraLine != null) rowH else 0f)
         val x0 = 70f * scale; val y0 = 60f * scale
         rect.set(x0, y0, x0 + pw, y0 + ph)
         c.drawRoundRect(rect, 22f * scale, 22f * scale, panelPaint)
@@ -399,6 +440,11 @@ class NightSkyView(ctx: Context) : View(ctx) {
             hintPaint.textAlign = Paint.Align.RIGHT
             c.drawText("face ${dir8(az)} · ${alt.toInt()}° up", x0 + pw - pad, y, hintPaint)
             hintPaint.textAlign = Paint.Align.LEFT
+        }
+        auroraLine?.let { line ->
+            auroraTextPaint.textSize = 22f * scale
+            val y = y0 + pad + 86f * scale + rowH * (best.size + 1) - 12f * scale
+            c.drawText("🌌 " + line.substringBefore(":").substringBefore(","), x0 + pad, y, auroraTextPaint)
         }
     }
 

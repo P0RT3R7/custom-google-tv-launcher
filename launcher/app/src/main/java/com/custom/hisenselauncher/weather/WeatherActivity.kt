@@ -95,6 +95,13 @@ class WeatherActivity : Activity() {
             body.addView(text(a.headline, 22f, Theme.TEXT_DIM), lp(top = 6))
         }
 
+        // tonight's aurora outlook
+        com.custom.hisenselauncher.data.AuroraRepository(com.custom.hisenselauncher.data.Prefs(this)).cached()?.let { a ->
+            val good = a.level != com.custom.hisenselauncher.data.AuroraOutlook.Level.NONE
+            body.addView(text("🌌 ${a.headline}", 26f, if (good) Color.rgb(120, 255, 170) else Theme.TEXT_DIM), lp(top = 24))
+            body.addView(text(a.detail, 20f, Theme.TEXT_DIM), lp(top = 4))
+        }
+
         // next 24 hours
         body.addView(section("Next 24 hours"))
         val hourFmt = DateTimeFormatter.ofPattern("h a")
