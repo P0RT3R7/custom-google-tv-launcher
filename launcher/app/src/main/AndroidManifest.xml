@@ -66,6 +66,18 @@
             </intent-filter>
         </service>
 
+        <!-- Reads titles off the player screen of apps that hide them (Hulu, Netflix...). Enabled over adb. -->
+        <service
+            android:name=".media.TitleReaderService"
+            android:exported="true"
+            android:label="Hisense Launcher title reader"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/title_reader" />
+        </service>
+
         <!-- adb-only settings changes (shell holds DUMP; regular apps can't send this) -->
         <receiver
             android:name=".ConfigReceiver"

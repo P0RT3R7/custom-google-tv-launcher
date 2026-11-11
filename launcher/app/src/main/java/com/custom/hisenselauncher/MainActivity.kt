@@ -538,6 +538,8 @@ class MainActivity : Activity() {
         val msg = buildString {
             appendLine("${mark(MediaSessionHub.hasAccess(this@MainActivity))} Media access (Now Playing + Recently Watched)")
             appendLine("${mark(usageRepo.hasAccess())} Usage access (Your Apps Lately)")
+            val readerOn = (android.provider.Settings.Secure.getString(contentResolver, "enabled_accessibility_services") ?: "").contains("TitleReaderService")
+            appendLine("${mark(readerOn)} Title reader (Hulu, Netflix… titles in Continue Watching)")
             appendLine("${mark(trakt.configured)} Trakt client ID built in")
             appendLine("${mark(trakt.linked)} Trakt account linked")
             appendLine()

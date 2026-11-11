@@ -57,10 +57,20 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
         }
         val timed = ArrayList<Pair<Long, PosterItem>>()
         traktPlayback.filter { it.imdb != null }.forEach { timed += it.at to it.toPoster(landscape = true) }
-        local.filter { !it.appLevel && it.progress in 0.03f..0.92f && now - it.lastSeen < 21 * 86_400_000L }
+        val day = 86_400_000L
+        // shows/movies from apps that share progress
+        local.filter { !it.appLevel && it.source == "session" && !VideoApps.isPlatform(it.pkg) && it.progress in 0.03f..0.92f && now - it.lastSeen < 21 * day }
             .forEach { timed += it.lastSeen to it.toPoster() }
-        // apps that hide titles (Hulu, Netflix): one "Resume" card per app, last 3 days
-        local.filter { it.appLevel && now - it.lastSeen < 3 * 86_400_000L }.forEach { h ->
+        // half-watched videos on YouTube & co. (skip short clips)
+        local.filter { VideoApps.isPlatform(it.pkg) && it.duration >= 8 * 60_000L && it.progress in 0.03f..0.92f && now - it.lastSeen < 7 * day }
+            .forEach { timed += it.lastSeen to it.toPoster() }
+        // titles read off the player screen (Hulu, Netflix…): resume cards with the real show name
+        val readerItems = local.filter { it.source == "reader" && now - it.lastSeen < 3 * day && it.progress < 0.92f }
+        readerItems.forEach { h -> timed += h.lastSeen to h.toPoster().copy(subtitle = listOfNotNull(h.subtitle, "on ${appLabel(h.pkg)}").joinToString(" · ")) }
+        // apps that hide titles and weren't read: one "Resume" card per app, last 3 days
+        local.filter { it.appLevel && now - it.lastSeen < 3 * day }
+            .filter { a -> readerItems.none { it.pkg == a.pkg && it.lastSeen >= a.lastSeen - 15 * 60_000L } }
+            .forEach { h ->
             val ago = android.text.format.DateUtils.getRelativeTimeSpanString(h.lastSeen, now, android.text.format.DateUtils.MINUTE_IN_MILLIS)
             timed += h.lastSeen to PosterItem(
                 title = "Resume ${h.title}", subtitle = "Last watched $ago", image = null, pkg = h.pkg, historyKey = h.key,
@@ -70,7 +80,7 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
 
         // --- Recently Watched (titles only; merge by imdb / normalized title, newest first)
         val merged = ArrayList<Pair<Long, PosterItem>>()
-        local.filter { !it.appLevel }.forEach { merged += it.lastSeen to it.toPoster() }
+        local.filter { !it.appLevel && !VideoApps.isPlatform(it.pkg) }.forEach { merged += it.lastSeen to it.toPoster() }
         traktHistory.forEach { merged += it.at to it.toPoster(landscape = true) }
         val recent = merged.sortedByDescending { it.first }.map { it.second }
             .distinctBy { it.imdb ?: WatchHistoryStore.normalize(it.title) }.take(20)
@@ -85,6 +95,13 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
 
         val rows = ArrayList<FeedRow>()
         val used = HashSet<String>(watched)
+
+        // Recently on YouTube (and other video platforms)
+        val videos = local.filter { VideoApps.isPlatform(it.pkg) && !it.appLevel }.take(20).map { it.toPoster() }
+        if (videos.isNotEmpty()) {
+            val apps = videos.mapNotNull { it.pkg }.distinct()
+            rows += FeedRow(if (apps.size == 1) "Recently on ${appLabel(apps[0])}" else "Recent videos", videos, landscape = true)
+        }
 
         // Because you watched X (two most recent seeds)
         seeds.values.take(2).forEach { seed ->
@@ -140,6 +157,7 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
 
     /** Matches up to 6 unresolved local titles to Cinemeta ids per build (cached per item). */
     private fun resolveLocalHistory() {
+        store.all().filter { VideoApps.isPlatform(it.pkg) && it.imdb != "-" }.forEach { store.setResolution(it.key, "-", null) }
         store.all().filter { it.imdb == null && !it.appLevel }.take(6).forEach { h ->
             val queries = listOfNotNull(h.subtitle?.takeIf { it.length >= 3 }?.let { it to "series" }, h.title to null)
             var found: Title? = null
@@ -159,11 +177,20 @@ class HomeFeed(private val ctx: Context, prefs: Prefs) {
         return q == n || (n.length >= 4 && q.startsWith(n)) || (q.length >= 4 && n.startsWith(q))
     }
 
-    private fun HistoryItem.toPoster() = PosterItem(
+    private fun HistoryItem.toPoster() = if (VideoApps.isPlatform(pkg)) PosterItem(
         title = title, subtitle = subtitle,
-        image = resolvedImdb?.let { Cinemeta.backgroundUrl(it) } ?: artPath,
+        image = VideoApps.thumbnail(pkg, mediaId) ?: imageUrl ?: artPath,
+        progress = progress, pkg = pkg, intent = VideoApps.openIntent(pkg, mediaId), historyKey = key,
+    ) else PosterItem(
+        title = title, subtitle = subtitle,
+        image = resolvedImdb?.let { Cinemeta.backgroundUrl(it) } ?: artPath ?: imageUrl,
         progress = progress, imdb = resolvedImdb, type = type, pkg = pkg, historyKey = key,
     )
+
+    private fun appLabel(pkg: String): String = runCatching {
+        val pm = ctx.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    }.getOrDefault(pkg)
 
     private fun TraktItem.toPoster(landscape: Boolean) = PosterItem(
         title = title, subtitle = episodeLabel,

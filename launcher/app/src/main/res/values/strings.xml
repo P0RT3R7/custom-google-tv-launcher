@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Hisense Launcher</string>
+    <string name="title_reader_description">Reads the show or movie title from the player screen of apps that do not share it (Hulu, Netflix and others) so it can appear in Continue Watching. It only reads those apps, only while they are playing, and nothing leaves the TV.</string>
 </resources>

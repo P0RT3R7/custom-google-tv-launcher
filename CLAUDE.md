@@ -72,6 +72,18 @@ adb shell settings put secure screensaver_components $P/$P.dream.JellyDreamServi
 adb shell settings put secure screensaver_enabled 1
 adb shell cmd package set-home-activity $P/.MainActivity
 ```
+**Optional: title reader** (experimental). Hulu, Netflix, Prime Video, Disney+, Max and similar apps don't tell Android what's
+playing, so by default they only get an app-level "Resume Hulu" card. The title reader is an accessibility service that reads the
+show name off the player screen of those apps only, while they're playing, and keeps it on the TV. Explain that to the user and
+ask before enabling it. Run it after the install (it can't be enabled before the app is installed):
+```bash
+adb shell settings put secure enabled_accessibility_services com.custom.hisenselauncher/com.custom.hisenselauncher.media.TitleReaderService
+adb shell settings put secure accessibility_enabled 1
+```
+Check `dumpsys accessibility | grep "Bound services"`. To tune it: `adb shell setprop log.tag.TitleReader D` then
+`adb logcat -s TitleReader` while the user pauses a show. YouTube needs nothing extra: it shares titles, channels and video ids,
+and gets its own "Recently on YouTube" row.
+
 If an install fails with a signature mismatch, an older copy signed with a different key is installed:
 `adb uninstall com.custom.hisenselauncher` first.
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only these apps' events reach TitleReaderService (they play video but publish no titles). Keep in sync with VideoApps.TITLE_HIDING. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagIncludeNotImportantViews|flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/title_reader_description"
+    android:notificationTimeout="1000"
+    android:packageNames="com.hulu.livingroomplus,com.netflix.ninja,com.amazon.amazonvideo.livingroom,com.disney.disneyplus,com.wbd.stream,com.cbs.ott,com.peacocktv.peacockandroid,com.apple.atve.androidtv.appletv,com.philo.philo.google,com.amcplus.amcandroidtv,com.google.android.youtube.tvunplugged" />

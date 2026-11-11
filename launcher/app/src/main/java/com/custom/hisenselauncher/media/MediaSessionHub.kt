@@ -12,6 +12,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import com.custom.hisenselauncher.data.HistoryItem
+import com.custom.hisenselauncher.data.VideoApps
 import com.custom.hisenselauncher.data.WatchHistoryStore
 import java.io.File
 import java.io.FileOutputStream
@@ -119,6 +120,31 @@ object MediaSessionHub {
         update()
     }
 
+    /** True while [pkg] has a playing, paused or buffering session (used by TitleReaderService). */
+    fun isLive(pkg: String): Boolean = controllers.values.any { (c, _) -> c.packageName == pkg && c.playbackState?.state in liveStates }
+
+    /**
+     * A title read off the player screen of an app that publishes no metadata (TitleReaderService).
+     * Stored as a normal titled history entry so it can be matched to a show and shown with artwork.
+     */
+    fun recordFromReader(pkg: String, title: String, subtitle: String?) {
+        val s = store ?: return
+        val key = WatchHistoryStore.keyFor(pkg, title)
+        val now = System.currentTimeMillis()
+        if (now - (lastSaved[key] ?: 0L) < 30_000) return
+        lastSaved[key] = now
+        val c = controllers.values.map { it.first }.firstOrNull { it.packageName == pkg }
+        val duration = c?.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+        android.util.Log.d("MediaSessionHub", "reader entry for $pkg")
+        io.execute {
+            s.upsert(HistoryItem(
+                key = key, title = title, subtitle = subtitle, pkg = pkg, artPath = null, imdb = null, type = null,
+                lastSeen = now, position = c?.playbackState?.position ?: 0L, duration = duration, source = "reader",
+            ))
+        }
+        main.post { listeners.toList().forEach { it() } }
+    }
+
     private val liveStates = setOf(PlaybackState.STATE_PLAYING, PlaybackState.STATE_PAUSED, PlaybackState.STATE_BUFFERING)
 
     private fun titleOf(c: MediaController): String? = c.metadata?.let { md ->
@@ -162,9 +188,14 @@ object MediaSessionHub {
         val now = System.currentTimeMillis()
         if (now - (lastSaved[key] ?: 0L) < 30_000) return
         lastSaved[key] = now
-        android.util.Log.d("MediaSessionHub", "recorded ${if (np.titled) "title" else "app-level"} entry for ${np.pkg}")
+        val md = np.controller.metadata
+        val mediaId = md?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.takeIf { it.isNotBlank() }
+        val imageUrl = listOf(MediaMetadata.METADATA_KEY_ART_URI, MediaMetadata.METADATA_KEY_ALBUM_ART_URI, MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
+            .firstNotNullOfOrNull { k -> md?.getString(k)?.takeIf { it.startsWith("http") } }
+        android.util.Log.d("MediaSessionHub", "recorded ${if (np.titled) "title" else "app-level"} entry for ${np.pkg}" +
+            " (mediaId=${if (mediaId == null) "none" else if (VideoApps.youTubeId(mediaId) != null) "youtube-id" else "other"}, art=${np.art != null}, artUrl=${imageUrl != null})")
         val state = np.controller.playbackState
-        val duration = np.controller.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+        val duration = md?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val art = np.art
         io.execute {
             val artPath = art?.let { bmp ->
@@ -175,9 +206,10 @@ object MediaSessionHub {
             s.upsert(
                 HistoryItem(
                     key = key, title = np.title, subtitle = np.subtitle, pkg = np.pkg, artPath = artPath,
-                    imdb = if (np.titled) null else "-", type = null, lastSeen = now,
+                    // videos on YouTube & co. are never movies/shows: skip catalog matching
+                    imdb = if (np.titled && !VideoApps.isPlatform(np.pkg)) null else "-", type = null, lastSeen = now,
                     position = state?.position ?: 0L, duration = duration,
-                    appLevel = !np.titled,
+                    appLevel = !np.titled, mediaId = mediaId, imageUrl = imageUrl,
                 )
             )
         }

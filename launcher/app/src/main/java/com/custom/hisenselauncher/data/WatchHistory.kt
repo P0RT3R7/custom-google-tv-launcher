@@ -19,6 +19,12 @@ data class HistoryItem(
     val duration: Long,
     /** true = the app played something but didn't say what (Hulu, Netflix): shown as a Resume card. */
     val appLevel: Boolean = false,
+    /** The app's own id for the item (YouTube: the video id), from the media session. */
+    val mediaId: String? = null,
+    /** Artwork URL from the media session (used when no bitmap was shared). */
+    val imageUrl: String? = null,
+    /** session = from the app's media session; reader = read off the player screen (TitleReaderService). */
+    val source: String = "session",
 ) {
     val progress: Float get() = if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else -1f
     val resolvedImdb: String? get() = imdb?.takeIf { it.startsWith("tt") }
@@ -40,6 +46,8 @@ class WatchHistoryStore(ctx: Context) {
             imdb = item.imdb ?: old?.imdb,
             type = item.type ?: old?.type,
             artPath = item.artPath ?: old?.artPath,
+            mediaId = item.mediaId ?: old?.mediaId,
+            imageUrl = item.imageUrl ?: old?.imageUrl,
         )
         write(list.sortedByDescending { it.lastSeen }.take(MAX))
     }
@@ -66,6 +74,8 @@ class WatchHistoryStore(ctx: Context) {
                 imdb = o.optString("imdb").ifBlank { null }, type = o.optString("type").ifBlank { null },
                 lastSeen = o.optLong("seen"), position = o.optLong("pos"), duration = o.optLong("dur"),
                 appLevel = o.optBoolean("app", false),
+                mediaId = o.optString("mid").ifBlank { null }, imageUrl = o.optString("img").ifBlank { null },
+                source = o.optString("src").ifBlank { "session" },
             )
         }
     }.getOrDefault(emptyList())
@@ -77,6 +87,7 @@ class WatchHistoryStore(ctx: Context) {
                 put("key", it.key); put("title", it.title); put("subtitle", it.subtitle ?: "")
                 put("pkg", it.pkg); put("art", it.artPath ?: ""); put("imdb", it.imdb ?: ""); put("type", it.type ?: "")
                 put("seen", it.lastSeen); put("pos", it.position); put("dur", it.duration); put("app", it.appLevel)
+                put("mid", it.mediaId ?: ""); put("img", it.imageUrl ?: ""); put("src", it.source)
             })
         }
         val tmp = File(file.path + ".tmp")

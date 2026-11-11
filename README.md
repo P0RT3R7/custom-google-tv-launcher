@@ -23,6 +23,8 @@ Continue Watching, and a screensaver that shows you which stars to look for toni
 |---|---|
 | 🪼 **Live background** | Glowing sea nettles and moon jellies drawn in OpenGL at 60 fps, or your own video |
 | 📺 **Continue Watching** | Resume cards for apps like Hulu, plus episode-level progress from Trakt and apps that share it |
+| ▶️ **YouTube history** | A "Recently on YouTube" row; half-watched long videos show up in Continue Watching and reopen the exact video |
+| 🔍 **Title reader** (experimental) | Reads the show name off Hulu, Netflix, Prime Video, Disney+ and Max player screens, which don't share it |
 | 🎬 **Recently Watched + suggestions** | "Because you watched…" rows built from your history, opening straight into Nuvio or Stremio |
 | ⭐ **Favorites, recent apps, All Apps** | Long-press any tile to reorder, pin or hide |
 | 🌤 **Weather** | Current conditions in the top bar; full screen with 24-hour and 7-day forecast and NWS alerts |
